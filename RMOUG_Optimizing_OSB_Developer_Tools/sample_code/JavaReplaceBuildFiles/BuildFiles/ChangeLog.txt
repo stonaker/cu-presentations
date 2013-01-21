@@ -7,3 +7,6 @@
 
 1.2 to 1.3
  - Updated to automatically find and replace files within the /business/ and /proxy/ folders (to point to VarsReplacedDuringBuild instead)
+
+1.3 to 1.4
+ - Updating for RMOUG, removing remaining hard-coded values, making remaining options configurable 
