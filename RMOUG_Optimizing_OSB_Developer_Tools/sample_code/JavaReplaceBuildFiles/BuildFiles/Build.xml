@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<project name="JavaReplaceBuildFiles" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+	<property file="./build.properties" />
+	<property file="../../local.properties" />
+	<ivy:settings file="../../ivysettings.xml" />
+
+	<target name="BuildJavaJar">
+		<jar destfile="${workspace.export.config.jar.path}" basedir="${project.dir}/bin" excludes="**/*.jar" />
+	</target>
+
+	<target name="CmdLineIvyPull">
+		<delete failonerror="true" dir="${library.dir}"/>
+		<ivy:cleancache />
+		<ivy:resolve />
+		<ivy:retrieve />
+	</target>
+
+	<target name="IvyFullSync">
+		<!-- Ivy: Download all Dependencies -->
+		<antcall target="CmdLineIvyPull" /> 
+
+		<!-- Rebuild JAR file -->
+		<antcall target="BuildJavaJar" />
+
+		<!-- Publish the /Archive/JAR file to Ivy -->
+		<ivy:publish overwrite="true" update="true" forcedeliver="true" resolver="cuivyrepo" module="${module}" revision="${revision}">
+			<artifacts pattern="${workspace.export.config.dir}/[artifact]-[revision].[ext]"/>
+		</ivy:publish>
+	</target>
+</project>
