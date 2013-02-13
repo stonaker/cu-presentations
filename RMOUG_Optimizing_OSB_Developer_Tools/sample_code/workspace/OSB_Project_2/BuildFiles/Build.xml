@@ -1,0 +1,220 @@
+<?xml version="1.0" ?>
+<project name="OSB_Project_2" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+	<property file="./project.properties" />
+	<property file="../../workspace.properties" />
+
+	<!-- WebLogic Server, OSB and Scripting Setup -->	
+	<path id="classpath.wslt">
+		<fileset dir="${osb.home}/lib">
+			<include name="sb-kernel-api.jar" />
+			<include name="alsb.jar" />
+		</fileset>
+		<fileset dir="${osb.home}/modules">
+			<include name="com.bea.common.configfwk_1.3.0.0.jar" />
+		</fileset>
+		<fileset dir="${weblogic.home}/server/lib">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	<!-- End path setup -->
+
+	<!-- Custom task definitions -->
+	<taskdef name="wlst" classname="weblogic.ant.taskdefs.management.WLSTTask" classpathref="classpath.wslt" />
+	<taskdef name="antform" classname="com.sardak.antform.AntForm" classpath="${antform.jar}"/>
+	<taskdef resource="net/sf/antcontrib/antlib.xml"/>
+
+	<!-- IVY Setup -->
+	<ivy:settings file="../../ivysettings.xml" />
+
+	<!-- TARGETS -->
+	<target name="IvyPull">
+		<delete failonerror="true" dir="${library.dir}"/>
+		<ivy:cleancache />
+		<ivy:resolve />
+		<ivy:retrieve />
+	</target>
+
+	<target name="CleanAndCopyWorkspace">
+		<!-- Verify that required properties are set -->
+		<antcall target="VerifyProperties"/>
+
+		<delete failonerror="true" dir="${workspace.build.dir}" />
+		<copy todir="${workspace.build.dir}">
+			<fileset dir="${workspace.dir}"/>
+		</copy>
+
+		<!-- Recreate .metadata folder -->
+		<delete failonerror="true" dir="${metadata.build.dir}" />
+		<mkdir dir="${metadata.build.dir}" />
+
+		<!-- Copy correct Configuration project to the new workspace -->
+		<mkdir dir="${workspace.build.dir}/${osb.config.project}" />
+		<copy todir="${workspace.build.dir}/${osb.config.project}">
+			<fileset dir="${workspace.dir}/${osb.config.project}"/>
+		</copy>
+
+		<!-- Copy settings file that contains the list of related projects to be built -->
+		<copy failonerror="true" overwrite="true" file="${workspace.dir}/${osb.config.project}/.settings/com.bea.alsb.core.prefs" tofile="${workspace.build.dir}/${osb.config.project}/.settings/com.bea.alsb.core.prefs"/>
+
+		<!-- Remove unnecessary folders and files prior to running the export --> 
+		<delete failonerror="true" dir="${workspace.build.dir}/Jenkins" />
+	</target>
+
+	<!-- Note: You must have the JavaReplaceBuildFiles jar defined as a dependency in ivy.xml in order to call it in /lib/ -->
+	<target name="ReplaceBuildFiles">
+		<!-- Verify that required properties are set -->
+		<antcall target="VerifyProperties"/>
+
+		<java	fork="true"
+				failonerror="true"
+				maxmemory="16m"
+				classname="JavaReplaceBuildFiles"
+				classpath="lib/JavaReplaceBuildFiles-1.6.jar">
+			<arg line="${replacetokens.sourcefolders}" />
+			<arg line="${replacetokens.filetypes}" />
+			<arg line="${replacetokens.outputfolder}" />
+			<arg line="${project.build.dir}/../${tokensfilename}" />
+			<arg line="${replacetokens.foldernamesreplace}" />
+			<arg line="${debug}" />
+			<arg line="${project.build.dir}" />
+			<arg line="${replacetokens.renamesourcefiles}" />
+		</java>
+	</target>
+
+	<target name="ExportProjectToJar">
+		<!-- Verify that required properties are set -->
+		<antcall target="VerifyProperties"/>
+
+		<!-- Create output dir if not already exists -->
+		<mkdir dir="${workspace.export.config.dir}"/>
+
+		<!-- Delete file before recreating it (otherwise will get appended) -->
+		<delete failonerror="false" file="${workspace.export.config.jar.path}" />
+
+		<!-- Run the export in the build workspace, and output the JAR to the /Archive/ folder in the current project -->
+		<java dir="${eclipse.home}" jar="${eclipse.home}/plugins/org.eclipse.equinox.launcher_1.2.0.v20110502.jar" fork="true" failonerror="true" maxmemory="1024m">
+			<arg line="-data ${workspace.build.dir}" />
+			<arg line="-application com.bea.alsb.core.ConfigExport" />
+			<arg line="-configProject ${osb.config.project}" />
+			<arg line="-configJar ${workspace.export.config.jar.path}" />
+			<arg line="-includeDependencies false" />
+			<arg line="-configSubProjects ${export.projects}" />
+			<sysproperty key="weblogic.home" value="${weblogic.home}" />
+			<sysproperty key="osb.home" value="${osb.home}" />
+			<sysproperty key="osgi.bundlefile.limit" value="500" />
+			<sysproperty key="harvester.home" value="${osb.home}/harvester" />
+			<sysproperty key="osgi.nl" value="en_US" />
+			<sysproperty key="sun.lang.ClassLoader.allowArraySyntax" value="true" />
+			<sysproperty key="weblogic.home" value="${weblogic.home}" />
+			<sysproperty key="middleware.home" value="${fmw.home}" />
+			<sysproperty key="java.library.path" value="${java.library.path}:/opt/CollabNet_Subversion/lib" />
+		</java>
+	</target>	
+	
+	<target name="CreateOSBObjects">
+		<!-- Verify that required properties are set -->
+		<antcall target="VerifyProperties"/>
+
+		<!-- Only run this if the CreateOSBObjects.py file exists! (This can be generated using the WLST Record functionality.) -->
+		<if>
+			<available file="CreateOSBObjects.py"/>
+			<then>
+				<!-- Using Antform to properly secure input credentials (Ant's SecureInputHandler does not work within Eclipse IDE) -->
+				<antform title="Enter Credentials">
+					<label>Please enter password for user: ${wls.username} on server: ${wls.server}</label>
+					<textProperty label="Password: " property="wls.password" required="true" password="true"/>
+				</antform>
+		
+				<wlst fileName="./CreateOSBObjects.py" debug="${debug}" failOnError="true" arguments="${wls.username} ${wls.password} ${wls.server} ${wls.domain} ${wls.cluster}">
+					<script>
+						adminUser=sys.argv[1]
+						adminPassword=sys.argv[2]
+						adminUrl=sys.argv[3]
+						domainName=sys.argv[4]
+						clusterName=sys.argv[5]
+					</script>
+				</wlst>
+			</then>
+			<else>
+				<echo message="CreateOSBObjects.py not found. Skipping..."/>
+			</else>
+		</if>
+	</target>
+
+	<target name="CleanBuildAndPublish">
+		<!-- Verify that required properties are set -->
+		<antcall target="VerifyProperties"/>
+
+		<!-- Ivy: Download all Dependencies -->
+		<antcall target="IvyPull" /> 
+
+		<!-- Copy workspace to the build area -->
+		<antcall target="CleanAndCopyWorkspace" /> 
+
+		<!-- Replace any tokens prior to creating the JAR file for the project -->
+		<if>
+			<equals arg1="${replacetokens}" arg2="true" />
+			<then>
+				<antcall target="ReplaceBuildFiles" />
+			</then>
+		</if>
+
+		<!-- Export the current project in the workspace to its JAR file in /Archive/ -->
+		<antcall target="ExportProjectToJar" />
+
+		<!-- Publish the /Archive/JAR file to Ivy -->
+		<ivy:publish overwrite="true" update="true" forcedeliver="true" resolver="cuivyrepo" module="${module}" revision="${revision}">
+			<artifacts pattern="${workspace.export.config.dir}/[artifact]-[revision].[ext]"/>
+		</ivy:publish>
+
+		<!-- Using Antform to properly secure input credentials (Ant's SecureInputHandler does not work within Eclipse IDE) -->
+		<antform title="Enter Credentials">
+			<label>Please enter password for user: ${wls.username} on server: ${wls.server}</label>
+			<textProperty label="Password: " property="wls.password" required="true" password="true"/>
+		</antform>
+
+		<wlst fileName="./Publish.py" debug="${debug}" failOnError="true" arguments="${wls.username} ${wls.password} ${wls.server} None ${workspace.export.config.jar.path} None ${publish.preserve.settings}">
+			<script>
+				adminUser=sys.argv[1]
+				adminPassword=sys.argv[2]
+				adminUrl=sys.argv[3]
+				passphrase = sys.argv[2]
+				project=sys.argv[4]
+				importJar=sys.argv[5]
+				customFile=sys.argv[6]
+				preserveEnvValues=sys.argv[7]
+				connect(adminUser,adminPassword,adminUrl)
+				domainRuntime()
+	         </script>
+		</wlst>
+	</target>
+
+	<target name="_CleanBuildAndPublishDEV">
+		<property file="../../tokens.DEV.properties" />
+		<antcall target="CleanBuildAndPublish"/>
+	</target>
+
+	<target name="_CleanBuildAndPublishLOCAL">
+		<property file="../../tokens.LOCAL.properties" />
+		<var name="wls.username" unset="true"/>
+		<property name="wls.username" value="weblogic"/>	
+		<antcall target="CleanBuildAndPublish"/>
+	</target>
+
+	<target name="VerifyProperties">
+		<!-- Verify that critical environment properties are loaded -->
+		<fail message="Property tokensfilename does not exist.  (Are you running the high-level _CleanBuildAndPublishENV target?)">
+			<condition><not><isset property="tokensfilename"/></not></condition>
+		</fail>
+		<fail message="Property wls.server does not exist.  (Are you running the high-level _CleanBuildAndPublishENV target?)">
+			<condition><not><isset property="wls.server"/></not></condition>
+		</fail>
+		<fail message="Property wls.username does not exist.  (Are you running the high-level _CleanBuildAndPublishENV target?)">
+			<condition><not><isset property="wls.username"/></not></condition>
+		</fail>
+		<fail message="Property osb.config.project does not exist.  (Are you running the high-level _CleanBuildAndPublishENV target?)">
+			<condition><not><isset property="osb.config.project"/></not></condition>
+		</fail>
+	</target>
+</project>
