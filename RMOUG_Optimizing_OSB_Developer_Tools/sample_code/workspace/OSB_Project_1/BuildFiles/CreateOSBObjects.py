@@ -25,6 +25,8 @@ try:
 ### End of auto-generated/modified Code
 ###########################################################################
 
+    activate()
+
 except weblogic.descriptor.BeanAlreadyExistsException:
     print '===> Object already exists. No action was performed.'
     cancelEdit('y')
