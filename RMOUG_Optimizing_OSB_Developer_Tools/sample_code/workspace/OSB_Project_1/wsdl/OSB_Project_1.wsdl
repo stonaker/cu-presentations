@@ -1,0 +1,37 @@
+<wsdl:definitions name="OSB_Project_1" targetNamespace="OSB_Project_1" xmlns:tns="OSB_Project_1" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <wsdl:types>
+    <xsd:schema>
+      <xsd:import namespace="OSB_Project_1" schemaLocation="../xsd/Request.xsd"/>
+      <xsd:import namespace="OSB_Project_1" schemaLocation="../xsd/Response.xsd"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="MyRequest">
+    <wsdl:part name="Request" element="tns:MyRequestElement"/>
+  </wsdl:message>
+  <wsdl:message name="MyResponse">
+    <wsdl:part name="Response" element="tns:MyResponseList"/>
+  </wsdl:message>
+  <wsdl:portType name="MyPortType">
+    <wsdl:operation name="MyOperation">
+      <wsdl:input message="tns:MyRequest"/>
+      <wsdl:output message="tns:MyResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="MyHttpBinding" type="tns:MyPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="MyOperation">
+      <soap:operation soapAction="OSB_Project_1" style="document"/>
+      <wsdl:input>
+        <soap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" use="literal" parts="Request"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" use="literal" parts="Response"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="MyService">
+    <wsdl:port binding="tns:MyHttpBinding" name="LdapSearchPort">
+      <soap:address location="http://OSBSERVER/OSB_Project_1/"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

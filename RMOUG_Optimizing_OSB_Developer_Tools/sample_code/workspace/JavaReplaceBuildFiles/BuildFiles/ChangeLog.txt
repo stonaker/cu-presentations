@@ -1,0 +1,19 @@
+1.0 to 1.1
+ - Changed to use local projects properties files to find tokens, instead of global workspace properties.
+
+1.1 to 1.2
+ - Updated to make the target folder dynamic (via argument) and also to pass in the properties files in case
+   tokens are kept separately.
+
+1.2 to 1.3
+ - Updated to automatically find and replace files within the /business/ and /proxy/ folders (to point to VarsReplacedDuringBuild instead)
+
+1.3 to 1.4
+ - Updating for RMOUG, removing remaining hard-coded values, making remaining options configurable.
+ - Prevented from making a file copy if nothing was replaced
+
+1.4 to 1.5
+ - Added debugging functionality, shares same flag as WLST debugging in build.properties file
+
+1.5 to 1.6
+ - Added 2 new parameters: root project folder, and true/false flag to rename source (replaced) files
