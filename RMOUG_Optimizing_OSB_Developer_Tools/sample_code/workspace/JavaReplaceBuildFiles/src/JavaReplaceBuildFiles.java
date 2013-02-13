@@ -158,8 +158,8 @@ public class JavaReplaceBuildFiles
 			String[] sourceStrings = replaceNames.split(",");
 			for (String sourceString : sourceStrings) {
 				if (content.contains(sourceString)) {
-					logMessage("Replacing " + sourceString + " with " + outputFolder);
-					content = content.replaceAll(sourceString, outputFolder);
+					logMessage("Replacing " + sourceString + " with /" + outputFolder + "/");
+					content = content.replaceAll(sourceString, "/" + outputFolder + "/");
 					replaced = true;
 				}
 			}
